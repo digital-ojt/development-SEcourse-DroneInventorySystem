@@ -124,8 +124,9 @@ CREATE TABLE `operation_log` (
   `delete_flag` tinyint(1) NOT NULL,
   `create_date` datetime NOT NULL,
   `update_date` datetime NOT NULL,
-  PRIMARY KEY (`log_id`,`status`),
-  KEY `FK2ycknpoexcoywb1bpm9t0jbfc` (`admin_id`)
+  PRIMARY KEY (`log_id`),
+  KEY `FK2ycknpoexcoywb1bpm9t0jbfc` (`admin_id`),
+  CONSTRAINT `FK2ycknpoexcoywbIbp9t0jbfc` FOREIGN KEY (`admin_id`) REFERENCES `admin_info` (`admin_id`)
 ) ENGINE=InnoDB AUTO_INCREMENT=81233 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
@@ -156,7 +157,7 @@ DROP TABLE IF EXISTS `stock_info`;
 CREATE TABLE `stock_info` (
   `stock_id` int NOT NULL AUTO_INCREMENT,
   `category_id` int NOT NULL,
-  `name` varchar(255) DEFAULT NULL,
+  `name` varchar(255) NOT NULL,
   `center_id` int NOT NULL,
   `description` varchar(255) DEFAULT NULL,
   `amount` int NOT NULL,
@@ -166,7 +167,8 @@ CREATE TABLE `stock_info` (
   PRIMARY KEY (`stock_id`),
   KEY `FKk6mnj5y3d4nr7tccl9raech0m` (`category_id`),
   KEY `FKcw2bfvepliag374heetmbu104` (`center_id`),
-  CONSTRAINT `FKk6mnj5y3d4nr7tccl9raech0m` FOREIGN KEY (`category_id`) REFERENCES `category_info` (`category_id`)
+  CONSTRAINT `FKk6mnj5y3d4nr7tccl9raech0m` FOREIGN KEY (`category_id`) REFERENCES `category_info` (`category_id`),
+  CONSTRAINT `FKcw2bfvepIlag374heetmbu104` FOREIGN KEY (`center_id`) REFERENCES `center_info` (`center_id`)
 ) ENGINE=InnoDB AUTO_INCREMENT=52 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
