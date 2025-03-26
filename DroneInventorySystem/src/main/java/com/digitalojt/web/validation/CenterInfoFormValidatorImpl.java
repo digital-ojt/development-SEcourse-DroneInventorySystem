@@ -1,104 +1,119 @@
 package com.digitalojt.web.validation;
 
-import org.thymeleaf.util.StringUtils;
-
-import com.digitalojt.web.consts.ErrorMessage;
-import com.digitalojt.web.form.CenterInfoForm;
-import com.digitalojt.web.util.InputValidator;
-
 import jakarta.validation.ConstraintValidator;
 import jakarta.validation.ConstraintValidatorContext;
 
+import com.digitalojt.web.consts.ErrorMessage;
+import com.digitalojt.web.consts.InvalidCharacter;
+import com.digitalojt.web.consts.Region;
+import com.digitalojt.web.exception.ErrorMessageHelper;
+import com.digitalojt.web.form.CenterInfoForm;
+import com.digitalojt.web.util.InputValidator;
+
 /**
- * 在庫センター情報画面のバリデーションチェック 実装クラス
- * 
- * @author dotlife
+ * 在庫センター情報のバリデーション処理実装
+ * CenterInfoForm のフィールドに対してバリデーションを行うクラスです。
  */
 public class CenterInfoFormValidatorImpl implements ConstraintValidator<CenterInfoFormValidator, CenterInfoForm> {
 
-    /** 最大文字数定数 */
-    private static final int MAX_CENTER_NAME_LENGTH = 20;
-
+    /**
+     * フォームデータのバリデーション処理を行う
+     * @param form バリデーション対象のフォームデータ
+     * @param context バリデーションコンテキスト
+     * @return フォームが有効かどうか（有効ならtrue、無効ならfalse）
+     */
     @Override
     public boolean isValid(CenterInfoForm form, ConstraintValidatorContext context) {
-
-        // すべてのフィールドが空かをチェック
+        // フィールドがすべて空である場合にエラー処理
         if (isAllFieldsEmpty(form)) {
-            addErrorMessage(context, ErrorMessage.ALL_FIELDS_EMPTY_ERROR_MESSAGE);
+            context.disableDefaultConstraintViolation();
+            context.buildConstraintViolationWithTemplate(ErrorMessageHelper.getMessage(ErrorMessage.ALL_FIELDS_EMPTY_ERROR_MESSAGE))
+                   .addConstraintViolation();
             return false;
         }
-
-        // センター名のバリデーション
-        if (!isValidCenterName(form.getCenterName(), context)) {
+        
+        // センター名が不正文字に含まれる場合にエラー処理
+        if (isValidCenterName(form.getCenterName())) {
+            context.disableDefaultConstraintViolation();
+            context.buildConstraintViolationWithTemplate(ErrorMessageHelper.getMessage(ErrorMessage.ALL_FIELDS_EMPTY_ERROR_MESSAGE))
+                   .addConstraintViolation();
             return false;
         }
 
         // 都道府県のバリデーション
-        if (!isValidRegion(form.getRegion(), context)) {
+        if (!isValidRegion(form.getRegion())) {
+            // 都道府県が無効な場合、エラーメッセージをスロー
+            context.disableDefaultConstraintViolation();
+            context.buildConstraintViolationWithTemplate(ErrorMessageHelper.getMessage(ErrorMessage.ALL_FIELDS_EMPTY_ERROR_MESSAGE))
+                   .addConstraintViolation();
             return false;
         }
 
+        // バリデーションが成功した場合はtrueを返す
         return true;
     }
-
+    
     /**
-     * センター名のバリデーション
-     * 
-     * @param centerName センター名
-     * @param context バリデーションコンテキスト
-     * @return センター名が有効かどうか
+     * 文字列の不正文字チェックを実施する
+     * @param input
+     * @return
      */
-    private boolean isValidCenterName(String centerName, ConstraintValidatorContext context) {
-        if (centerName != null) {
-            // 不正文字列チェック
-            if (InputValidator.isValid(centerName)) {
-                addErrorMessage(context, ErrorMessage.INVALID_INPUT_ERROR_MESSAGE);
-                return false;
-            }
-
-            // 文字数チェック
-            if (centerName.length() > MAX_CENTER_NAME_LENGTH) {
-                addErrorMessage(context, ErrorMessage.CENTER_NAME_LENGTH_ERROR_MESSAGE);
-                return false;
+    private boolean isValidCenterName(String input) {
+        // 文字列の各文字を1つずつチェック
+        for (char c : input.toCharArray()) {
+            // 不正文字が含まれているか確認
+            if (isInvalidCharacter(c)) {
+                return true;
             }
         }
-        return true;
+        return false;
+    }
+    
+    /**
+     * 文字が不正文字かをチェックするメソッド
+     * 
+     * @param character チェックする文字
+     * @return 不正文字なら true, それ以外は false
+     */
+    private static boolean isInvalidCharacter(char character) {
+        for (InvalidCharacter invalidChar : InvalidCharacter.values()) {
+            if (invalidChar.getCharacter() == character) {
+            	// 不正文字が見つかった
+                return true;
+            }
+        }
+        // 不正文字ではない
+        return false;
     }
 
     /**
-     * 都道府県のバリデーション
-     * 
+     * 都道府県が有効かどうかを確認
      * @param region 都道府県
-     * @param context バリデーションコンテキスト
      * @return 都道府県が有効かどうか
      */
-    private boolean isValidRegion(String region, ConstraintValidatorContext context) {
-        if (region != null && InputValidator.isValid(region)) {
-            addErrorMessage(context, ErrorMessage.INVALID_INPUT_ERROR_MESSAGE);
-            return false;
+    private boolean isValidRegion(String region) {
+    	if (!InputValidator.isValid(region)) {
+    		return false;
+    	}
+    	
+        // Enum の名前と比較して一致するかチェック
+    	boolean regionFlg = false;
+        for (Region regions : Region.values()) {
+        	if (regions.getName().contains(region)) {
+        		regionFlg = true;
+        		break;
+            }
         }
-        return true;
+        return regionFlg;
     }
 
     /**
-     * すべてのフィールドが空かをチェック
-     * 
-     * @param form フォーム
-     * @return フィールドが空かどうか
+     * フォームの全てのフィールドが空かどうかを確認
+     * @param form フォームデータ
+     * @return すべてのフィールドがnullまたは空の場合はtrue、それ以外はfalse
      */
     private boolean isAllFieldsEmpty(CenterInfoForm form) {
-        return StringUtils.isEmpty(form.getCenterName()) && StringUtils.isEmpty(form.getRegion());
-    }
-
-    /**
-     * エラーメッセージをコンテキストに追加
-     * 
-     * @param context バリデーションコンテキスト
-     * @param message エラーメッセージ
-     */
-    private void addErrorMessage(ConstraintValidatorContext context, String message) {
-        context.disableDefaultConstraintViolation();
-        context.buildConstraintViolationWithTemplate(message)
-               .addConstraintViolation();
+        // センター名または都道府県がnullまたは空の場合にtrueを返す
+        return form.getCenterName().isEmpty() && form.getRegion().isEmpty();
     }
 }

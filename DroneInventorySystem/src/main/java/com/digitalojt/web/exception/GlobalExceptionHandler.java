@@ -1,41 +1,84 @@
 package com.digitalojt.web.exception;
 
-import java.time.LocalDateTime;
+import java.sql.SQLException;
 
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
+import jakarta.servlet.http.HttpServletRequest;
+
+import org.springframework.dao.DataAccessException;
+import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.servlet.mvc.support.RedirectAttributes;
+
+import com.digitalojt.web.consts.LogMessage;
+import com.digitalojt.web.consts.UrlConsts;
+
 
 /**
- * グローバル例外ハンドラ
- * 
- * @author dotlife
- *
+ * グローバル例外ハンドラー
  */
-
 @ControllerAdvice
 public class GlobalExceptionHandler {
 
-	// 入力チェック時のハンドリング
+    /**
+     * 入力値不正例外のハンドリング
+     */
     @ExceptionHandler(InvalidInputException.class)
-    public ResponseEntity<ErrorResponse> handleInvalidInputException(InvalidInputException ex) {
-        ErrorResponse errorResponse = new ErrorResponse(
-                ex.getMessage(), 
-                HttpStatus.BAD_REQUEST.value(), 
-                LocalDateTime.now().toString()
-            );
-        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);
+    public String handleInvalidInputException(InvalidInputException ex, RedirectAttributes redirectAttributes, HttpServletRequest request, Model model) {
+        return handleException(ex, redirectAttributes, request);
+    }
+
+    /**
+     * 重複登録例外のハンドリング
+     */
+    @ExceptionHandler(DuplicateEntryException.class)
+    public String handleDuplicateEntryException(DuplicateEntryException ex, RedirectAttributes redirectAttributes, HttpServletRequest request) {
+        return handleException(ex, redirectAttributes, request);
+    }
+
+    /**
+     * 共通のエラーハンドリング
+     */
+    private String handleException(Exception ex, RedirectAttributes redirectAttributes, HttpServletRequest request) {
+        String errorMessage = ex.getMessage();
+        redirectAttributes.addFlashAttribute(LogMessage.FLASH_ATTRIBUTE_ERROR, errorMessage);
+
+        // リファラーの取得
+        String referer = request.getHeader("Referer");
+        referer = referer != null ? referer.replaceAll("^(https?://[^/]+)", "") : "";
+
+        return "redirect:" + referer;
     }
     
-    // 重複エントリ時のハンドリング
-    @ExceptionHandler(DuplicateEntryException.class)
-    public ResponseEntity<ErrorResponse> handleDuplicateEntryException(DuplicateEntryException ex) {
-        ErrorResponse errorResponse = new ErrorResponse(
-                ex.getMessage(), 
-                HttpStatus.CONFLICT.value(), 
-                LocalDateTime.now().toString()
-            );
-        return ResponseEntity.status(HttpStatus.CONFLICT).body(errorResponse);
+    /**
+     * DBエラーのハンドリング
+     * @return ErrorController class
+     */
+    @ExceptionHandler(DataAccessException.class)
+    public String handleDatabaseException(DataAccessException ex, RedirectAttributes redirectAttributes) {
+        String errorMessage = ex.getMessage();
+        redirectAttributes.addFlashAttribute(LogMessage.FLASH_ATTRIBUTE_ERROR, errorMessage);
+        return "redirect:" + UrlConsts.ERROR;
     }
+    
+    /**
+     * SQLエラーのハンドリング
+     */
+    @ExceptionHandler(SQLException.class)
+    public String handleSQLException(SQLException ex, RedirectAttributes redirectAttributes) {
+        String errorMessage = ex.getMessage();
+        redirectAttributes.addFlashAttribute(LogMessage.FLASH_ATTRIBUTE_ERROR, errorMessage);
+        return "redirect:" + UrlConsts.ERROR;
+    }
+    
+    /**
+     * 予期せぬシステムエラーのハンドリング
+     */
+    @ExceptionHandler(Exception.class)
+    public String handleGeneralException(Exception ex, RedirectAttributes redirectAttributes) {
+        String errorMessage = ex.getMessage();
+        redirectAttributes.addFlashAttribute(LogMessage.FLASH_ATTRIBUTE_ERROR, errorMessage);
+        return "redirect:" + UrlConsts.ERROR;
+    }
+
 }

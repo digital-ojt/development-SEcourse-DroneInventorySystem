@@ -1,7 +1,11 @@
 package com.digitalojt.web.controller;
 
+import jakarta.servlet.http.HttpServletRequest;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.web.servlet.error.ErrorController;
 import org.springframework.context.MessageSource;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
@@ -15,11 +19,14 @@ import com.digitalojt.web.util.MessageManager;
  * @author dotlife
  *
  */
-public class AbstractController {
+public abstract class AbstractController implements ErrorController {
 
     // ロガーは各コントローラで使えるように共通化
-    private final Logger logger = LoggerFactory.getLogger(this.getClass());
+    private static final Logger logger = LoggerFactory.getLogger(AbstractController.class);
     
+    @Autowired
+    private HttpServletRequest request; // リクエスト情報を取得
+
     /**
      * 現在のメソッド名を取得
      * @return メソッド名
@@ -30,59 +37,71 @@ public class AbstractController {
                 .orElse("UnknownMethod");
     }
     
-	/**
-	 * 処理開始のログ
+    /**
+     * 処理開始のログ
 	 * 
 	 * @param logger ロガーオブジェクト
-	 * @param action アクション名
-	 */
-	protected void logStart(String action) {
-		logger.info(String.format(LogMessage.ACCESS_LOG));
-		logger.info(String.format(LogMessage.APP_LOG, action, getMethodName(), LogMessage.PROCESS_START));
-	}
+     * @param action アクション名
+     */
+    protected void logStart(String action) {
+        logger.info(String.format(LogMessage.ACCESS_LOG, request.getRequestURI()));
+        logger.info(String.format(LogMessage.APP_LOG, action, getMethodName(), LogMessage.PROCESS_START));
+    }
 
-	/**
-	 * 処理終了のログ
+    /**
+     * 処理終了のログ
 	 * 
 	 * @param logger ロガーオブジェクト
-	 * @param action アクション名
-	 */
-	protected void logEnd(String action) {
-		logger.info(String.format(LogMessage.APP_LOG, action, getMethodName(), LogMessage.PROCESS_END));
-	}
-
-	/**
-	 * エラーログ
+     * @param action アクション名
+     */
+    protected void logEnd(String action) {
+        logger.info(String.format(LogMessage.APP_LOG, action, getMethodName(), LogMessage.PROCESS_END));
+    }
+    
+    /**
+     * エラーログ
 	 * 
 	 * @param logger ロガーオブジェクト
-	 * @param action アクション名
-	 * @param e 例外オブジェクト
-	 */
-	protected void logError(String action, Exception e) {
+     * @param action アクション名
+     * @param e 例外オブジェクト
+     */
+    protected void logError(String action, Exception e) {
 		logger.error(String.format(LogMessage.ERROR_LOG, action, getMethodName(), e));
-	}
-
-	/**
-	 * バリデーションエラーログ
+    }
+    
+    /**
+     * クリティカルエラーログ
 	 * 
 	 * @param logger ロガーオブジェクト
-	 * @param action アクション名
-	 * @param errorMsg エラーメッセージ
-	 */
-	protected void logValidationError(String action, String errorMsg) {
-		logger.error(String.format(LogMessage.ERROR_LOG, action, getMethodName(), errorMsg));
-	}
+     * @param action アクション名
+     * @param errorMsg エラーメッセージ
+     */
+    protected void logException(String action, String errorMsg) {
+        logger.error(String.format(LogMessage.ERROR_LOG, action, getMethodName(), String.valueOf(errorMsg)));
+    }
 
-	/**
-	 * エラーメッセージをフラッシュメッセージにセット
+
+    /**
+     * バリデーションエラーログ
 	 * 
-	 * @param messageSource メッセージソース
-	 * @param redirectAttributes リダイレクト属性
-	 * @param messageConst メッセージ定数
-	 */
-	public void setFlashErrorMsg(MessageSource messageSource, RedirectAttributes redirectAttributes,
-			String messageConst) {
-		String errorMsg = MessageManager.getMessage(messageSource, messageConst);
-		redirectAttributes.addFlashAttribute(LogMessage.FLASH_ATTRIBUTE_ERROR, errorMsg);
-	}
+	 * @param logger ロガーオブジェクト
+     * @param action アクション名
+     * @param errorMsg エラーメッセージ
+     */
+    protected void logValidationError(String action, String errorMsg) {
+        logger.error(String.format(LogMessage.ERROR_LOG, action, getMethodName(), errorMsg));
+    }
+
+    /**
+     * エラーメッセージをフラッシュメッセージにセット
+	 * 
+     * @param messageSource メッセージソース
+     * @param redirectAttributes リダイレクト属性
+     * @param messageConst メッセージ定数
+     */
+    public void setFlashErrorMsg(MessageSource messageSource, RedirectAttributes redirectAttributes,
+                                 String messageConst) {
+        String errorMsg = MessageManager.getMessage(messageSource, messageConst);
+        redirectAttributes.addFlashAttribute(LogMessage.FLASH_ATTRIBUTE_ERROR, errorMsg);
+    }
 }
